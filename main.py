@@ -20,7 +20,7 @@ class TickTacToe:
         return (state.reshape(-1) == 0).astype(np.uint8)
     
     def check_win(self, state, action):
-        if action == None:
+        if action is None:
             return False
         
         row = action // self.col_count
@@ -103,14 +103,14 @@ class Node:
         if is_terminated:
             return value
         
-        roullout_state = self.state.copy()
+        rollout_state = self.state.copy()
         rollout_player = 1
 
         while True:
-            valid_moves = self.game.get_valid_moves(roullout_state)
+            valid_moves = self.game.get_valid_moves(rollout_state)
             action = np.random.choice(np.where(valid_moves == 1)[0])
-            rollout_state = self.game.get_next_state(roullout_state, action, rollout_player)
-            value, is_terminated = self.game.get_value_and_terminated(roullout_state, action)
+            rollout_state = self.game.get_next_state(rollout_state, action, rollout_player)
+            value, is_terminated = self.game.get_value_and_terminated(rollout_state, action)
             if is_terminated:
                 if rollout_player == -1:
                     value = self.game.get_opponent_value(value)
