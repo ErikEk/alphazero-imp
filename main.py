@@ -158,7 +158,7 @@ class ResNet(nn.Module):
         )
 
         self.valueHead = nn.Sequential(
-            nn.Conv2d(num_hidden, 3, kernel_size=1, padding=1),
+            nn.Conv2d(num_hidden, 3, kernel_size=3, padding=1),
             nn.BatchNorm2d(3),
             nn.ReLU(),
             nn.Flatten(),
