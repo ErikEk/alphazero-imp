@@ -21,3 +21,5 @@ sudo docker stop gs_container
 
 # Remove
 sudo docker rm gs_container
+
+15
