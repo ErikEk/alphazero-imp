@@ -76,13 +76,13 @@ class Node:
         
         self.children = []
 
-        self.expandable_moves = game.get_valid_moves(state)
+        #self.expandable_moves = game.get_valid_moves(state)
 
         self.visit_count = 0
         self.value_sum = 0
 
     def is_fully_expanded(self):
-        return np.sum(self.expandable_moves) == 0 and len(self.children) > 0
+        return len(self.children) > 0 #np.sum(self.expandable_moves) == 0 and
         
     def select(self):
         best_child = None
@@ -111,7 +111,7 @@ class Node:
         self.children.append(child)
         return child
 
-    def simulate(self):
+    '''def simulate(self):
         value, is_terminated = self.game.get_value_and_terminated(self.state, self.action_taken)
         value = self.game.get_opponent_value(value)
 
@@ -138,7 +138,7 @@ class Node:
 
         value = self.game.get_opponent_value(value)
         if self.parent is not None:
-            self.parent.backpropagate(value)
+            self.parent.backpropagate(value)'''
 
 class ResNet(nn.Module):
     def __init__(self, game, num_resBlocks, num_hidden):
@@ -197,10 +197,12 @@ class ResBlock(nn.Module):
         return x
 
 class MCTS:
-    def __init__(self, game, args):
+    def __init__(self, game, args, model):
         self.game = game
         self.args = args
+        self.model = model
     
+    @torch.no_grad()
     def search(self, state):
         root = Node(self.game, self.args, state)
 
@@ -214,20 +216,26 @@ class MCTS:
             value = self.game.get_opponent_value(value)
 
             if not is_terminated:
-                node = node.expand()
-                value = node.simulate()
+                policy, value = self.model(
+                    torch.tensor(self.game.get_encoded_state(node.state)).unsqueeze(0)
+                )
+                policy = torch.softmax(policy, axis=1).squeeze(0).cpu().numpy()
+                value_moves = self.game.get_valid_moves(node.state)
+                policy *= value_moves
+                policy /= np.sum(policy)
+                value = value.item()
+                
+                node = node.expand(policy)
 
-            
+                #value = node.simulate()
+
             node.backpropagate(value)
-
 
         action_probs = np.zeros(self.game.action_size)
         for child in root.children:
             action_probs[child.action_taken] = child.visit_count
         action_probs /= np.sum(action_probs)
         return action_probs
-
-        # return visit_counts
 
 
 tictactoe = TickTacToe()
@@ -249,10 +257,6 @@ policy = torch.softmax(policy, axis=1).squeeze(0).detach().cpu().numpy()
 
 print(value, policy)
 
-#matplotlib.use('TkAgg')
-#plt.bar(range(tictactoe.action_size), policy)
-#matplotlib.use('Agg')
-#plt.show()
 exit(0)
 tictactoe = TickTacToe()
 player = 1
