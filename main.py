@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import matplotlib
 #matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
+import random
 
 torch.manual_seed(0)
 print(torch.__version__)
@@ -67,18 +68,19 @@ class TickTacToe:
         return encoded_state
 
 class Node:
-    def __init__(self, game, args, state, parent=None, action_taken=None):
+    def __init__(self, game, args, state, parent=None, action_taken=None, prior=0, visit_count=0):
         self.game = game
         self.args = args
         self.state = state
         self.parent = parent
         self.action_taken = action_taken
+        self.prior = prior
         
         self.children = []
 
         #self.expandable_moves = game.get_valid_moves(state)
 
-        self.visit_count = 0
+        self.visit_count = visit_count
         self.value_sum = 0
 
     def is_fully_expanded(self):
@@ -96,19 +98,25 @@ class Node:
         return best_child
     
     def get_ucb(self, child):
-        q_value = 1 - ((child.value_sum / child.visit_count) + 1) / 2
-        return q_value + self.args['C'] * math.sqrt(math.log(self.visit_count) / child.visit_count)
+        if child.visit_count == 0:
+            q_value = 0
+        else:
+            q_value = 1 - ((child.value_sum / child.visit_count) + 1) / 2
+        return q_value + self.args['C'] * math.sqrt(self.visit_count / (1 + child.visit_count)) * child.prior
 
-    def expand(self):
-        action = np.random.choice(np.where(self.expandable_moves == 1)[0])
-        self.expandable_moves[action] = 0
-        child_state = self.state.copy()
-        child_state = self.game.get_next_state(child_state, action, 1)
-        child_state = self.game.change_perspective(child_state, player=-1)
+    def expand(self, policy):
+        for action, prob in enumerate(policy):
+            if prob > 0:
 
-        child = Node(self.game, self.args, child_state, self, action)
+                #action = np.random.choice(np.where(self.expandable_moves == 1)[0])
+                #self.expandable_moves[action] = 0
+                child_state = self.state.copy()
+                child_state = self.game.get_next_state(child_state, action, 1)
+                child_state = self.game.change_perspective(child_state, player=-1)
 
-        self.children.append(child)
+                child = Node(self.game, self.args, child_state, self, action, prob)
+
+                self.children.append(child)
         return child
 
     '''def simulate(self):
@@ -131,18 +139,19 @@ class Node:
                     value = self.game.get_opponent_value(value)
                 return value
             
-            rollout_player = self.game.get_opponent(rollout_player)
+            rollout_player = self.game.get_opponent(rollout_player)'''
     def backpropagate(self, value):
         self.value_sum += value
         self.visit_count += 1
 
         value = self.game.get_opponent_value(value)
         if self.parent is not None:
-            self.parent.backpropagate(value)'''
+            self.parent.backpropagate(value)
 
 class ResNet(nn.Module):
-    def __init__(self, game, num_resBlocks, num_hidden):
+    def __init__(self, game, num_resBlocks, num_hidden, device):
         super().__init__()
+        self.device = device
         self.startBlock = nn.Sequential(
             nn.Conv2d(3, num_hidden, kernel_size=3, padding=1),
             nn.BatchNorm2d(num_hidden),
@@ -169,6 +178,7 @@ class ResNet(nn.Module):
             nn.Linear(3 * game.row_count * game.col_count, 1),
             nn.Tanh()
         )
+        self.to(device)
 
     def forward(self, x):
         x = self.startBlock(x)
@@ -196,6 +206,80 @@ class ResBlock(nn.Module):
 
         return x
 
+class AlphaZero:
+    def __init__(self, model, optimizer, game, args):
+        self.model = model
+        self.optimizer = optimizer
+        self.game = game
+        self.args = args
+        self.mcts = MCTS(game, args, model)
+
+    def selfPlay(self):
+        memory = []
+        player = 1
+        state = self.game.get_initial_state()
+        
+        while True:
+            neutral_state = self.game.change_perspective(state, player)
+            action_probs = self.mcts.search(neutral_state)
+            memory.append((neutral_state, action_probs, player))
+            temperature_action_probs = action_probs ** (1 / self.args['temperature'])
+            #print("ss")
+            #print(temperature_action_probs)
+            action = np.random.choice(np.arange(self.game.action_size), p=action_probs)
+            state = self.game.get_next_state(state, action, player)
+            value, is_terminated = self.game.get_value_and_terminated(state, action)
+            if is_terminated:
+                returnMemory = []
+                for hist_neutral_state, hist_action_probs, hist_player in memory:
+                    hist_outcome = value if hist_player == player else self.game.get_opponent_value(value)
+                    returnMemory.append((
+                        self.game.get_encoded_state(hist_neutral_state),
+                        hist_action_probs,
+                        hist_outcome,
+                    ))
+                return returnMemory
+            
+            player = self.game.get_opponent(player)
+
+    def train(self, memory):
+        random.shuffle(memory)
+        for batchIdx in range(0, len(memory), self.args['batch_size']):
+            sample = memory[batchIdx:min(len(memory) - 1, batchIdx + self.args['batch_size'])]
+            state, policy_targets, value_targets = zip(*sample)
+
+            state, policy_targets, value_targets = np.array(state), np.array(policy_targets), np.array(value_targets).reshape(-1,1)
+
+            state = torch.tensor(state, dtype=torch.float32, device=self.model.device)
+            policy_targets = torch.tensor(policy_targets, dtype=torch.float32, device=self.model.device)
+            value_targets = torch.tensor(value_targets, dtype=torch.float32, device=self.model.device)
+
+            out_policy, out_value = self.model(state)
+            policy_loss = F.cross_entropy(out_policy, policy_targets)
+            value_loss = F.mse_loss(out_value, value_targets)
+            loss = policy_loss + value_loss
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+
+    def learn(self):
+        for iteration in range(self.args['num_iterations']):
+            memory = []
+
+            self.model.eval()
+            for selfPlay_iteration in range(self.args['num_selfPlay_iterations']):
+                memory += self.selfPlay()
+                print(selfPlay_iteration)
+            self.model.train()
+            for epoch in range(self.args['num_epochs']):
+                self.train(memory)
+                print("s "+str(epoch))
+
+            torch.save(self.model.state_dict(), f"model_{iteration}.pt")
+            torch.save(self.optimizer.state_dict(), f"optimizer_{iteration}.pt")
+
+
 class MCTS:
     def __init__(self, game, args, model):
         self.game = game
@@ -204,8 +288,22 @@ class MCTS:
     
     @torch.no_grad()
     def search(self, state):
-        root = Node(self.game, self.args, state)
+        root = Node(self.game, self.args, state, visit_count=1)
 
+        # Add noise to the root node
+        policy, _ = self.model(
+            torch.tensor(self.game.get_encoded_state(state), device=self.model.device).unsqueeze(0)
+        )
+        policy = torch.softmax(policy, axis=1).squeeze(0).cpu().numpy()
+        policy = (1 - self.args['dirichlet_epsilon']) * policy + self.args['dirichlet_epsilon'] \
+            * np.random.dirichlet([self.args['dirichlet_alpha']] * self.game.action_size)
+        
+        valid_moves = self.game.get_valid_moves(state)
+        policy *= valid_moves
+        policy /= np.sum(policy)
+        root.expand(policy)
+
+        
         for search in range(self.args['num_searches']):
             node = root
 
@@ -217,7 +315,7 @@ class MCTS:
 
             if not is_terminated:
                 policy, value = self.model(
-                    torch.tensor(self.game.get_encoded_state(node.state)).unsqueeze(0)
+                    torch.tensor(self.game.get_encoded_state(node.state), device=self.model.device).unsqueeze(0)
                 )
                 policy = torch.softmax(policy, axis=1).squeeze(0).cpu().numpy()
                 value_moves = self.game.get_valid_moves(node.state)
@@ -239,34 +337,61 @@ class MCTS:
 
 
 tictactoe = TickTacToe()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
 
 state = tictactoe.get_initial_state()
-state = tictactoe.get_next_state(state, 2, 1)
-state = tictactoe.get_next_state(state, 7, -1)
+state = tictactoe.get_next_state(state, 2, -1)
+state = tictactoe.get_next_state(state, 4, -1)
+state = tictactoe.get_next_state(state, 6, 1)
+state = tictactoe.get_next_state(state, 8, 1)
 
 print(state)
 
 encoded_state = tictactoe.get_encoded_state(state)
 print(encoded_state)
 
-tensor_state = torch.tensor(encoded_state).unsqueeze(0)
-model = ResNet(tictactoe, 4, 64)
+'''tensor_state = torch.tensor(encoded_state, device=device).unsqueeze(0)
+model = ResNet(tictactoe, 4, 64, device)
+model.load_state_dict(torch.load("model_2.pt"), map_location=device)
+model.eval()
 policy, value = model(tensor_state)
 value = value.item()
 policy = torch.softmax(policy, axis=1).squeeze(0).detach().cpu().numpy()
 
 print(value, policy)
+exit(0)'''
 
+ticktactoe = TickTacToe()
+model = ResNet(ticktactoe, 4, 64, device)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
+args = {
+    'C': 2,
+    'num_searches': 60,
+    'num_iterations': 3,
+    'num_selfPlay_iterations': 500,
+    'num_epochs': 4,
+    'batch_size': 64,
+    'temperature': 1.25,
+    'dirichlet_epsilon': 0.25,
+    'dirichlet_alpha': 0.3
+}
+
+alphaZero = AlphaZero(model, optimizer, ticktactoe, args)
+alphaZero.learn()
 exit(0)
+
 tictactoe = TickTacToe()
 player = 1
 
 args = {
-    'C': 1.41,
+    'C': 2,
     'num_searches': 1000
 }
 
-mcts = MCTS(tictactoe, args)
+model = ResNet(tictactoe, 4, 64, device)
+model.eval()
+mcts = MCTS(tictactoe, args, model)
 
 state = tictactoe.get_initial_state()
 
