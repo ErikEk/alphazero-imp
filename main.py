@@ -5,10 +5,10 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import matplotlib
-matplotlib.use('Qt5Agg')
+#matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 
-toch.manual_seed(0)
+torch.manual_seed(0)
 print(torch.__version__)
 
 class TickTacToe:
@@ -250,9 +250,9 @@ policy = torch.softmax(policy, axis=1).squeeze(0).detach().cpu().numpy()
 print(value, policy)
 
 #matplotlib.use('TkAgg')
-plt.bar(range(tictactoe.action_size), policy)
+#plt.bar(range(tictactoe.action_size), policy)
 #matplotlib.use('Agg')
-plt.show()
+#plt.show()
 exit(0)
 tictactoe = TickTacToe()
 player = 1
