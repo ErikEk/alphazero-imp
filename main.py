@@ -335,7 +335,6 @@ class MCTS:
         action_probs /= np.sum(action_probs)
         return action_probs
 
-
 tictactoe = TickTacToe()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
