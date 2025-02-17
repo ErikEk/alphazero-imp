@@ -303,7 +303,6 @@ class MCTS:
         policy /= np.sum(policy)
         root.expand(policy)
 
-        
         for search in range(self.args['num_searches']):
             node = root
 
