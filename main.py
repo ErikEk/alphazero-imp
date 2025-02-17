@@ -338,6 +338,7 @@ tictactoe = TickTacToe()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
+'''
 state = tictactoe.get_initial_state()
 state = tictactoe.get_next_state(state, 2, -1)
 state = tictactoe.get_next_state(state, 4, -1)
@@ -347,7 +348,7 @@ state = tictactoe.get_next_state(state, 8, 1)
 print(state)
 
 encoded_state = tictactoe.get_encoded_state(state)
-print(encoded_state)
+print(encoded_state)'''
 
 '''tensor_state = torch.tensor(encoded_state, device=device).unsqueeze(0)
 model = ResNet(tictactoe, 4, 64, device)
@@ -360,8 +361,7 @@ policy = torch.softmax(policy, axis=1).squeeze(0).detach().cpu().numpy()
 print(value, policy)
 exit(0)'''
 
-ticktactoe = TickTacToe()
-model = ResNet(ticktactoe, 4, 64, device)
+model = ResNet(tictactoe, 4, 64, device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
 args = {
     'C': 2,
@@ -375,7 +375,7 @@ args = {
     'dirichlet_alpha': 0.3
 }
 
-alphaZero = AlphaZero(model, optimizer, ticktactoe, args)
+alphaZero = AlphaZero(model, optimizer, tictactoe, args)
 alphaZero.learn()
 exit(0)
 
