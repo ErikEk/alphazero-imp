@@ -379,7 +379,6 @@ alphaZero = AlphaZero(model, optimizer, tictactoe, args)
 alphaZero.learn()
 exit(0)
 
-tictactoe = TickTacToe()
 player = 1
 
 args = {
