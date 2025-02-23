@@ -335,9 +335,9 @@ class MCTS:
         action_probs /= np.sum(action_probs)
         return action_probs
 
-tictactoe = TickTacToe()
+'''tictactoe = TickTacToe()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
+print(device)'''
 
 '''
 state = tictactoe.get_initial_state()
@@ -351,7 +351,7 @@ print(state)
 encoded_state = tictactoe.get_encoded_state(state)
 print(encoded_state)'''
 
-# INIT MODEL
+'''# INIT MODEL
 model = ResNet(tictactoe, 4, 64, device)
 model.load_state_dict(torch.load("model_2.pt"))
 model.eval()
@@ -396,7 +396,7 @@ while True:
 
     player = tictactoe.get_opponent(player)
 
-exit(0)
+exit(0)'''
 
 ''' # TRAIN PART
 model = ResNet(tictactoe, 4, 64, device)
@@ -417,7 +417,7 @@ alphaZero = AlphaZero(model, optimizer, tictactoe, args)
 alphaZero.learn()
 exit(0)'''
 
-player = 1
+'''player = 1
 
 args = {
     'C': 2,
@@ -457,3 +457,4 @@ while True:
         break
 
     player = tictactoe.get_opponent(player)
+'''
