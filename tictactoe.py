@@ -9,6 +9,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import random
 
+train = True
 torch.manual_seed(0)
 print(torch.__version__)
 
@@ -350,17 +351,54 @@ print(state)
 encoded_state = tictactoe.get_encoded_state(state)
 print(encoded_state)'''
 
-'''tensor_state = torch.tensor(encoded_state, device=device).unsqueeze(0)
+# INIT MODEL
 model = ResNet(tictactoe, 4, 64, device)
-model.load_state_dict(torch.load("model_2.pt"), map_location=device)
+model.load_state_dict(torch.load("model_2.pt"))
 model.eval()
-policy, value = model(tensor_state)
-value = value.item()
-policy = torch.softmax(policy, axis=1).squeeze(0).detach().cpu().numpy()
 
-print(value, policy)
-exit(0)'''
+state = tictactoe.get_initial_state()
+player = 1
 
+# PLAY
+while True:
+    print(state)
+    if player == 1:
+
+        valid_moves = tictactoe.get_valid_moves(state)
+        print("valid moves", [i for i in range(tictactoe.action_size) if valid_moves[i] == 1])
+        action = int(input(f"{player}:"))
+        if valid_moves[action] == 0:
+            print("action not valid")
+            continue
+    else:
+        encoded_state = tictactoe.get_encoded_state(state)
+        tensor_state = torch.tensor(encoded_state, device=device).unsqueeze(0)
+        policy, value = model(tensor_state)
+        value = value.item()
+        policy = torch.softmax(policy, axis=1).squeeze(0).detach().cpu().numpy()
+
+        print(value, policy)
+        print(max(policy))
+        action = np.argmax(policy)
+        #neutral_state = tictactoe.change_perspective(state, player)
+        #mcts_probs = mcts.search(neutral_state)
+        #action = np.argmax(mcts_probs)
+
+    state = tictactoe.get_next_state(state, action, player)
+    value, is_terminated = tictactoe.get_value_and_terminated(state, action)
+    if is_terminated:
+        print(state)
+        if value == 1:
+            print(player, "won")
+        else:
+            print("draw")
+        break
+
+    player = tictactoe.get_opponent(player)
+
+exit(0)
+
+''' # TRAIN PART
 model = ResNet(tictactoe, 4, 64, device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
 args = {
@@ -377,7 +415,7 @@ args = {
 
 alphaZero = AlphaZero(model, optimizer, tictactoe, args)
 alphaZero.learn()
-exit(0)
+exit(0)'''
 
 player = 1
 
