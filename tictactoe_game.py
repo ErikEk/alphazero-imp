@@ -1,20 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox
 import numpy as np
-print(np.__version__)
-import math
 import torch
-from torch import nn
-import torch.nn.functional as F
-import matplotlib
-#matplotlib.use('Qt5Agg')
-import matplotlib.pyplot as plt
-import random
 from tictactoe import TickTacToe, ResNet
 
 device = "cpu"
-print(device)
-
 tictactoe = TickTacToe()
 
 model = ResNet(tictactoe, 4, 64, device)
@@ -26,15 +16,13 @@ class TicTacToeGame:
     def __init__(self):
         self.window = tk.Tk()
         self.window.title("Tic-Tac-Toe")
-        
-        #self.current_player = "X"
-        #self.board = [""] * 9
+
         self.buttons = []
-        
+
         # Game logic
         self.player = 1
         self.state = tictactoe.get_initial_state()
-        
+
         self.create_board()
         self.window.mainloop()
 
@@ -52,13 +40,10 @@ class TicTacToeGame:
             self.reset_board()
             return
 
-        #self.board[index] = self.player
         self.buttons[index].config(text="X")
-        print(self.player)
-        print(index)
         
         self.state = tictactoe.get_next_state(self.state, index, player=self.player)
-        print(self.state)
+
         # Check if the game is over
         if tictactoe.check_win(self.state, index):
             messagebox.showinfo("Game Over", f"Player {"X" if self.player == 1 else "O"} wins!")
@@ -83,7 +68,6 @@ class TicTacToeGame:
         
         self.player = tictactoe.get_opponent(self.player)
         self.state = tictactoe.get_next_state(self.state, move_index, player=self.player)
-        print(self.state)
         
         # Check if the game is over
         if tictactoe.check_win(self.state, move_index):
@@ -98,7 +82,6 @@ class TicTacToeGame:
         self.player = tictactoe.get_opponent(self.player)
 
     def reset_board(self):
-        print("Resetting")
         for button in self.buttons:
             button.config(text="")
         self.state = tictactoe.get_initial_state()
