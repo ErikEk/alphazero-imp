@@ -4,12 +4,8 @@ import math
 import torch
 from torch import nn
 import torch.nn.functional as F
-import matplotlib
-#matplotlib.use('Qt5Agg')
-import matplotlib.pyplot as plt
 import random
 
-train = True
 torch.manual_seed(0)
 print(torch.__version__)
 
@@ -398,8 +394,8 @@ while True:
 
 exit(0)'''
 
-''' # TRAIN PART
-model = ResNet(tictactoe, 4, 64, device)
+
+'''model = ResNet(tictactoe, 4, 64, device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
 args = {
     'C': 2,

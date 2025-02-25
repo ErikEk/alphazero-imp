@@ -8,7 +8,7 @@ device = "cpu"
 tictactoe = TickTacToe()
 
 model = ResNet(tictactoe, 4, 64, device)
-model.load_state_dict(torch.load("model_2.pt"))
+model.load_state_dict(torch.load("model_2.pt",map_location=device))
 model.eval()
 
 # Create the main game class
@@ -34,7 +34,8 @@ class TicTacToeGame:
             self.buttons.append(button)
 
     def on_click(self, index):
-
+        if self.buttons[index]["text"] != "":
+            return
         if np.sum(tictactoe.get_valid_moves(self.state)) == 0:
             messagebox.showinfo("Game Over", f"Player {self.player} wins!")
             self.reset_board()
