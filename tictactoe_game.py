@@ -8,7 +8,7 @@ device = "cpu"
 tictactoe = TickTacToe()
 
 model = ResNet(tictactoe, 4, 64, device)
-model.load_state_dict(torch.load("model_2.pt",map_location=device))
+model.load_state_dict(torch.load("model_19.pt",map_location=device))
 model.eval()
 
 # Create the main game class
@@ -42,7 +42,6 @@ class TicTacToeGame:
             return
 
         self.buttons[index].config(text="X")
-        
         self.state = tictactoe.get_next_state(self.state, index, player=self.player)
 
         # Check if the game is over
@@ -66,10 +65,9 @@ class TicTacToeGame:
         move_index = np.argmax(policy)
 
         self.buttons[move_index].config(text="O")
-        
         self.player = tictactoe.get_opponent(self.player)
         self.state = tictactoe.get_next_state(self.state, move_index, player=self.player)
-        
+
         # Check if the game is over
         if tictactoe.check_win(self.state, move_index):
             messagebox.showinfo("Game Over", f"Player {"O" if self.player == -1 else "X"} wins!")

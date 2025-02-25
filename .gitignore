@@ -1,5 +1,5 @@
-model_*
-optimizer_*
+models/model_*
+models/optimizer_*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -23,3 +23,6 @@ sudo docker stop gs_container
 sudo docker rm gs_container
 
 15
+
+# Monitor
+gpustat -cp -i

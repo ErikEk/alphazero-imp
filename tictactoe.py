@@ -5,6 +5,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import random
+import os
 
 torch.manual_seed(0)
 print(torch.__version__)
@@ -267,14 +268,19 @@ class AlphaZero:
             self.model.eval()
             for selfPlay_iteration in range(self.args['num_selfPlay_iterations']):
                 memory += self.selfPlay()
-                print(selfPlay_iteration)
+                if selfPlay_iteration % 100 == 0:
+                    print(f"iteration: {selfPlay_iteration}")
             self.model.train()
             for epoch in range(self.args['num_epochs']):
                 self.train(memory)
-                print("s "+str(epoch))
+                print(f"epoch: {epoch}")
 
-            torch.save(self.model.state_dict(), f"model_{iteration}.pt")
-            torch.save(self.optimizer.state_dict(), f"optimizer_{iteration}.pt")
+            if os.path.exists(f"models/model_{iteration}.pt"):  # Check if file exists
+                os.remove(f"models/model_{iteration}.pt")
+            torch.save(self.model.state_dict(), f"models/model_{iteration}.pt")
+            if os.path.exists(f"models/optimizer_{iteration}.pt"):  # Check if file exists
+                os.remove(f"models/optimizer_{iteration}.pt")
+            torch.save(self.optimizer.state_dict(), f"models/optimizer_{iteration}.pt")
 
 
 class MCTS:
@@ -330,10 +336,6 @@ class MCTS:
             action_probs[child.action_taken] = child.visit_count
         action_probs /= np.sum(action_probs)
         return action_probs
-
-'''tictactoe = TickTacToe()
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)'''
 
 '''
 state = tictactoe.get_initial_state()
@@ -394,24 +396,35 @@ while True:
 
 exit(0)'''
 
+def main():
+    tictactoe = TickTacToe()
+    print(torch.cuda.is_available())  # Should return True if CUDA is working
+    print(torch.cuda.get_device_name(0))
+    print(torch.version.cuda)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"training on {device}")
+    model = ResNet(tictactoe, 4, 64, device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
+    args = {
+        'C': 2,
+        'num_searches': 60,
+        'num_iterations': 20,
+        'num_selfPlay_iterations': 500,
+        'num_epochs': 100,
+        'batch_size': 64,
+        'temperature': 1.25,
+        'dirichlet_epsilon': 0.25,
+        'dirichlet_alpha': 0.3
+    }
 
-'''model = ResNet(tictactoe, 4, 64, device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
-args = {
-    'C': 2,
-    'num_searches': 60,
-    'num_iterations': 3,
-    'num_selfPlay_iterations': 500,
-    'num_epochs': 4,
-    'batch_size': 64,
-    'temperature': 1.25,
-    'dirichlet_epsilon': 0.25,
-    'dirichlet_alpha': 0.3
-}
+    os.makedirs("models", exist_ok=True)
 
-alphaZero = AlphaZero(model, optimizer, tictactoe, args)
-alphaZero.learn()
-exit(0)'''
+    alphaZero = AlphaZero(model, optimizer, tictactoe, args)
+    alphaZero.learn()
+    exit(0)
+
+if __name__ == "__main__":
+    main()
 
 '''player = 1
 
