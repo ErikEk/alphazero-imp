@@ -8,7 +8,7 @@ device = "cpu"
 tictactoe = TickTacToe()
 
 model = ResNet(tictactoe, 4, 64, device)
-model.load_state_dict(torch.load("model_19.pt",map_location=device))
+model.load_state_dict(torch.load("models/model_12.pt",map_location=device))
 model.eval()
 
 # Create the main game class

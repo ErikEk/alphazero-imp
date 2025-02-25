@@ -256,6 +256,7 @@ class AlphaZero:
             policy_loss = F.cross_entropy(out_policy, policy_targets)
             value_loss = F.mse_loss(out_value, value_targets)
             loss = policy_loss + value_loss
+            #print(loss.item())
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -398,7 +399,6 @@ exit(0)'''
 
 def main():
     tictactoe = TickTacToe()
-    print(torch.cuda.is_available())  # Should return True if CUDA is working
     print(torch.cuda.get_device_name(0))
     print(torch.version.cuda)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -408,9 +408,9 @@ def main():
     args = {
         'C': 2,
         'num_searches': 60,
-        'num_iterations': 20,
+        'num_iterations': 3,
         'num_selfPlay_iterations': 500,
-        'num_epochs': 100,
+        'num_epochs': 4,
         'batch_size': 64,
         'temperature': 1.25,
         'dirichlet_epsilon': 0.25,
