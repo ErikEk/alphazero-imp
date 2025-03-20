@@ -2,13 +2,20 @@ import tkinter as tk
 from tkinter import messagebox
 import numpy as np
 import torch
-from tictactoe import TickTacToe, ResNet
+from tictactoe import ResNet, ConnectFour
 
+
+device = "cpu"
+tictactoe = ConnectFour()
+
+model = ResNet(tictactoe, 4, 64, device)
+model.load_state_dict(torch.load("models/connectfour/model_12.pt",map_location=device))
+model.eval()
 
 ROWS = 6
 COLS = 7
 
-class ConnectFour:
+class ConnectFourGame:
     def __init__(self, root):
         self.root = root
         self.root.title("Connect Four")
@@ -82,17 +89,12 @@ class ConnectFour:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    game = ConnectFour(root)
+    game = ConnectFourGame(root)
     root.mainloop()
 
 
 '''
-device = "cpu"
-tictactoe = TickTacToe()
 
-model = ResNet(tictactoe, 4, 64, device)
-model.load_state_dict(torch.load("models/model_12.pt",map_location=device))
-model.eval()
 
 # Create the main game class
 class TicTacToeGame:

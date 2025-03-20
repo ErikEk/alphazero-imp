@@ -15,7 +15,7 @@ class ConnectFour:
     def __init__(self):
         self.row_count = 6
         self.column_count = 7
-        self.action_size = self.col_count
+        self.action_size = self.column_count
         self.in_a_row = 4
 
     def __repr__(self):
@@ -82,6 +82,7 @@ class ConnectFour:
         encoded_state = np.stack(
             (state == -1, state == 0, state == 1)
         ).astype(np.float32)
+
         return encoded_state
 
 
@@ -215,7 +216,7 @@ class ResNet(nn.Module):
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(32 * game.row_count * game.col_count, game.action_size)
+            nn.Linear(32 * game.row_count * game.column_count, game.action_size)
         )
 
         self.valueHead = nn.Sequential(
@@ -223,7 +224,7 @@ class ResNet(nn.Module):
             nn.BatchNorm2d(3),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(3 * game.row_count * game.col_count, 1),
+            nn.Linear(3 * game.row_count * game.column_count, 1),
             nn.Tanh()
         )
         self.to(device)
@@ -447,9 +448,40 @@ while True:
 
     player = tictactoe.get_opponent(player)
 
-exit(0)'''
+exit(0)
+'''
 
+# TRAIN CONNECTFOUR
+'''
 def main():
+    game = ConnectFour()
+    print(torch.cuda.get_device_name(0))
+    print(torch.version.cuda)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"training on {device}")
+    model = ResNet(game, 4, 64, device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
+    args = {
+        'C': 2,
+        'num_searches': 60,
+        'num_iterations': 3,
+        'num_selfPlay_iterations': 500,
+        'num_epochs': 4,
+        'batch_size': 64,
+        'temperature': 1.25,
+        'dirichlet_epsilon': 0.25,
+        'dirichlet_alpha': 0.3
+    }
+
+    os.makedirs("models", exist_ok=True)
+
+    alphaZero = AlphaZero(model, optimizer, game, args)
+    alphaZero.learn()
+    exit(0)
+'''
+
+# TRAIN TICTACKTOE
+'''def main():
     tictactoe = TickTacToe()
     print(torch.cuda.get_device_name(0))
     print(torch.version.cuda)
@@ -474,41 +506,50 @@ def main():
     alphaZero = AlphaZero(model, optimizer, tictactoe, args)
     alphaZero.learn()
     exit(0)
+'''
 
-if __name__ == "__main__":
-    main()
+#if __name__ == "__main__":
+#    main()
 
-'''player = 1
+player = 1
 
 args = {
     'C': 2,
-    'num_searches': 1000
+    'num_searches': 100,
+    'dirichlet_epsilon': 0.0, # 0.25
+    'dirichlet_alpha': 0.3
 }
 
-model = ResNet(tictactoe, 4, 64, device)
-model.eval()
-mcts = MCTS(tictactoe, args, model)
+game = ConnectFour()
+print(torch.cuda.get_device_name(0))
+print(torch.version.cuda)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"training on {device}")
 
-state = tictactoe.get_initial_state()
+model = ResNet(game, 9, 128, device)
+model.eval()
+mcts = MCTS(game, args, model)
+
+state = game.get_initial_state()
 
 while True:
     print(state)
     if player == 1:
 
-        valid_moves = tictactoe.get_valid_moves(state)
-        print("valid moves", [i for i in range(tictactoe.action_size) if valid_moves[i] == 1])
+        valid_moves = game.get_valid_moves(state)
+        print("valid moves", [i for i in range(game.action_size) if valid_moves[i] == 1])
         action = int(input(f"{player}:"))
         if valid_moves[action] == 0:
             print("action not valid")
             continue
     else:
-        neutral_state = tictactoe.change_perspective(state, player)
+        neutral_state = game.change_perspective(state, player)
         mcts_probs = mcts.search(neutral_state)
         action = np.argmax(mcts_probs)
 
 
-    state = tictactoe.get_next_state(state, action, player)
-    value, is_terminated = tictactoe.get_value_and_terminated(state, action)
+    state = game.get_next_state(state, action, player)
+    value, is_terminated = game.get_value_and_terminated(state, action)
     if is_terminated:
         print(state)
         if value == 1:
@@ -517,5 +558,4 @@ while True:
             print("draw")
         break
 
-    player = tictactoe.get_opponent(player)
-'''
+    player = game.get_opponent(player)
