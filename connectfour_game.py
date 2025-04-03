@@ -2,14 +2,14 @@ import tkinter as tk
 from tkinter import messagebox
 import numpy as np
 import torch
-from tictactoe import ResNet, ConnectFour
+from train_game import ResNet, ConnectFour
 
 
 device = "cpu"
-tictactoe = ConnectFour()
+game = ConnectFour()
 
-model = ResNet(tictactoe, 4, 64, device)
-model.load_state_dict(torch.load("models/connectfour/model_12.pt",map_location=device))
+model = ResNet(game, 9, 128, device)
+model.load_state_dict(torch.load("models/connectfour/model_7_ConnectFour.pt",map_location=device))
 model.eval()
 
 ROWS = 6

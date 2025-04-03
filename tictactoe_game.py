@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import numpy as np
 import torch
-from tictactoe import TickTacToe, ResNet
+from train_game import TickTacToe, ResNet
 
 device = "cpu"
 tictactoe = TickTacToe()
