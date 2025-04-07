@@ -6,15 +6,15 @@ from train_game import ResNet, ConnectFour
 
 
 device = "cpu"
-game = ConnectFour()
+connectfour = ConnectFour()
 
-model = ResNet(game, 9, 128, device)
+model = ResNet(connectfour, 9, 128, device)
 model.load_state_dict(torch.load("models/connectfour/model_7_ConnectFour.pt",map_location=device))
 model.eval()
 
 ROWS = 6
 COLS = 7
-
+'''
 class ConnectFourGame:
     def __init__(self, root):
         self.root = root
@@ -86,7 +86,86 @@ class ConnectFourGame:
                 if all(self.board[r-i, c+i] == player for i in range(4)):
                     return True
         return False
+'''
 
+class ConnectFourGame:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Connect Four")
+        self.board = np.zeros((ROWS, COLS), dtype=int)
+        self.current_player = 1
+        self.buttons = []
+        self.canvas = tk.Canvas(root, width=COLS*100, height=(ROWS+1)*100, bg="blue")
+        self.canvas.pack()
+        self.draw_board()
+        self.canvas.bind("<Button-1>", self.drop_piece)
+
+        # Game logic
+        self.player = 1
+        self.state = connectfour.get_initial_state()
+
+    def draw_board(self):
+        self.canvas.delete("all")
+        for c in range(COLS):
+            for r in range(ROWS):
+                x1, y1 = c*100, (r+1)*100
+                x2, y2 = (c+1)*100, (r+2)*100
+                self.canvas.create_oval(x1+10, y1+10, x2-10, y2-10, fill="white", outline="black")
+        self.update_pieces()
+
+    def update_pieces(self):
+        colors = {0: "white", 1: "red", 2: "yellow"}
+        for c in range(COLS):
+            for r in range(ROWS):
+                x1, y1 = c*100, (ROWS-r)*100
+                x2, y2 = (c+1)*100, (ROWS-r+1)*100
+                self.canvas.create_oval(x1+10, y1+10, x2-10, y2-10, fill=colors[self.board[r, c]], outline="black")
+
+    def drop_piece(self, event):
+        col = event.x // 100
+        if self.is_valid_location(col):
+            row = self.get_next_open_row(col)
+            self.board[row, col] = self.current_player
+            self.state = connectfour.get_next_state(self.state, col, player=self.player)
+            print(self.state)
+            self.draw_board()
+            if self.check_win(self.current_player):
+                self.canvas.create_text(COLS*50, 50, text=f"Player {self.current_player} wins!", font=("Arial", 24), fill="black")
+                self.canvas.unbind("<Button-1>")
+                return
+            self.current_player = 3 - self.current_player  # Switch player
+    
+    def is_valid_location(self, col):
+        return self.board[ROWS-1, col] == 0
+
+    def get_next_open_row(self, col):
+        for r in range(ROWS):
+            if self.board[r, col] == 0:
+                return r
+
+    def check_win(self, player):
+        # Check horizontal locations
+        for r in range(ROWS):
+            for c in range(COLS-3):
+                if all(self.board[r, c+i] == player for i in range(4)):
+                    return True
+        # Check vertical locations
+        for c in range(COLS):
+            for r in range(ROWS-3):
+                if all(self.board[r+i, c] == player for i in range(4)):
+                    return True
+        # Check positive diagonal
+        for r in range(ROWS-3):
+            for c in range(COLS-3):
+                if all(self.board[r+i, c+i] == player for i in range(4)):
+                    return True
+        # Check negative diagonal
+        for r in range(3, ROWS):
+            for c in range(COLS-3):
+                if all(self.board[r-i, c+i] == player for i in range(4)):
+                    return True
+        return False
+    
 if __name__ == "__main__":
     root = tk.Tk()
     game = ConnectFourGame(root)
