@@ -93,7 +93,7 @@ class ConnectFourGame:
         self.root = root
         self.root.title("Connect Four")
         self.board = np.zeros((ROWS, COLS), dtype=int)
-        self.current_player = 1
+        #self.current_player = 1
         self.buttons = []
         self.canvas = tk.Canvas(root, width=COLS*100, height=(ROWS+1)*100, bg="blue")
         self.canvas.pack()
@@ -114,7 +114,7 @@ class ConnectFourGame:
         self.update_pieces()
 
     def update_pieces(self):
-        colors = {0: "white", 1: "red", 2: "yellow"}
+        colors = {0: "white", 1: "red", -1: "yellow"}
         for c in range(COLS):
             for r in range(ROWS):
                 x1, y1 = c*100, (ROWS-r)*100
@@ -122,18 +122,56 @@ class ConnectFourGame:
                 self.canvas.create_oval(x1+10, y1+10, x2-10, y2-10, fill=colors[self.board[r, c]], outline="black")
 
     def drop_piece(self, event):
+
+        if np.sum(connectfour.get_valid_moves(self.state)) == 0:
+            messagebox.showinfo("Game Over", f"Player {self.player} wins!")
+            #self.reset_board()
+            print("Game Over")
+            return
+        
         col = event.x // 100
         if self.is_valid_location(col):
             row = self.get_next_open_row(col)
-            self.board[row, col] = self.current_player
+            print("col")
+            print(col)
+            self.board[row, col] = self.player
             self.state = connectfour.get_next_state(self.state, col, player=self.player)
             print(self.state)
-            self.draw_board()
-            if self.check_win(self.current_player):
-                self.canvas.create_text(COLS*50, 50, text=f"Player {self.current_player} wins!", font=("Arial", 24), fill="black")
+            
+            if self.check_win(self.player):
+                self.canvas.create_text(COLS*50, 50, text=f"Player {self.player} wins!", font=("Arial", 24), fill="black")
                 self.canvas.unbind("<Button-1>")
                 return
-            self.current_player = 3 - self.current_player  # Switch player
+            # Use model to predict the next move
+            #self.current_player = 3 - self.current_player  # Switch player
+            self.player = connectfour.get_opponent(self.player)
+            encoded_state = connectfour.get_encoded_state(self.state)
+            tensor_state = torch.tensor(encoded_state, device=device).unsqueeze(0)
+            policy, value = model(tensor_state)
+            value = value.item()
+            policy = torch.softmax(policy, axis=1).squeeze(0).detach().cpu().numpy()
+
+            print(value, policy)
+
+            move_index = np.argmax(policy)
+            print("move_index")
+            print(move_index)
+            row = self.get_next_open_row(move_index)
+
+            self.board[row, move_index] = self.player
+            
+            self.state = connectfour.get_next_state(self.state, move_index, player=self.player)
+            print(self.state)
+            print(self.board)
+            
+            self.draw_board()
+            if self.check_win(self.player):
+                self.canvas.create_text(COLS*50, 50, text=f"Player {self.player} wins!", font=("Arial", 24), fill="black")
+                self.canvas.unbind("<Button-1>")
+                return
+            self.player = connectfour.get_opponent(self.player)
+            #self.current_player = 3 - self.current_player  # Switch player
+
     
     def is_valid_location(self, col):
         return self.board[ROWS-1, col] == 0
