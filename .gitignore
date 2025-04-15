@@ -2,7 +2,7 @@ models/connectfour/model_*
 models/connectfour/optimizer_*
 model_*
 optimizer_*
-
+leandojo_*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
