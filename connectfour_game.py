@@ -48,8 +48,9 @@ class ConnectFourGame:
 
     def drop_piece(self, event):
 
-        if np.sum(connectfour.get_valid_moves(self.state)) == 0:
-            messagebox.showinfo("Game Over", f"Player {self.player} wins!")
+        if self.check_win(self.player):
+            self.reset_board()
+            self.draw_board()
             return
         
         col = event.x // 100
@@ -81,7 +82,7 @@ class ConnectFourGame:
             self.draw_board()
             if self.check_win(self.player):
                 self.canvas.create_text(COLS*50, 50, text=f"Player {self.player} wins!", font=("Arial", 24), fill="black")
-                self.canvas.unbind("<Button-1>")
+                #self.canvas.unbind("<Button-1>")
                 return
             self.player = connectfour.get_opponent(self.player)
     
@@ -116,6 +117,11 @@ class ConnectFourGame:
                     return True
         return False
     
+    def reset_board(self):
+        self.board = np.zeros((ROWS, COLS), dtype=int)
+        self.state = connectfour.get_initial_state()
+        self.player = 1
+
 if __name__ == "__main__":
     root = tk.Tk()
     game = ConnectFourGame(root)
